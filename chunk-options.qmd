@@ -1,0 +1,152 @@
+---
+title: "Quarto code block options"
+format: html
+author: Richard J Telford
+date: today
+date-format: "D MMMM YYYY"
+editor: visual
+execute: 
+  echo: false
+---
+
+### Block options
+
+```{r}
+#| label: load-packages
+#| include: false
+library(dplyr)
+library(tidyr)
+library(reactable)
+library(crosstalk) # remotes::install_github("richardjtelford/crosstalk@no-all)
+```
+
+
+Code block options control how the blocks work and how any output is treated.
+Options are given in special comments at the top of the block.
+
+There are lots of block options, but only a few that you will need to use frequently.
+Here are some and their default.
+
+-   `echo` (`true`) Show the block's code in the output.
+-   `eval` (`true`) Run the block's code.
+-   `include` (`true`) Include the output of the block in the document.
+-   `message` (`true`) Include messages from R.
+-   `warning` (`true`) Include warnings from R.
+-   `output` (`true`) How and whether to include results.
+
+Some of these block options interact.
+Use the following widget, which initially shows the defaults, to explore what is shown with the most commonly used options.
+
+::: {style="background-color: gainsboro;  padding:5px; border: 2px solid darkgrey;"}
+**Select your block options**
+
+```{r}
+#| label: chunk-option-setup
+#| layout-ncol: 2
+
+
+block_options <- crossing(eval = c(TRUE, FALSE), 
+         echo = c(TRUE, FALSE), 
+         message = c(TRUE, FALSE), 
+         warning = c(TRUE, FALSE), 
+         include = c(TRUE, FALSE), 
+         output = c("true", "asis", "false")) |> 
+  mutate(
+    Code = if_else(echo & include, "shown", "hidden"),
+    Messages = case_when(
+      !eval ~ "none",
+      !include ~ "hidden",
+      !message ~ "hidden",
+      TRUE ~ "shown"
+    ),
+    Warnings = case_when(
+      !eval ~ "none",
+      !include ~ "hidden",
+      !warning ~ "hidden",
+      TRUE ~ "shown"
+    ),
+    `Text, figures & tables` = case_when(
+      !eval ~ "none",
+      !include ~ "hidden",
+      output == "false" ~ "hidden",
+      output == "asis" ~ "raw markdown",
+      TRUE ~ "shown"
+    )
+  ) |> 
+  mutate(across(eval:include, tolower),
+         across(eval:include, factor, levels = c("true", "false")),
+         output = factor(output, levels = c("true", "asis", "false")))
+
+# make crosstalk shared data
+data <- SharedData$new(block_options)
+
+# make select input
+filter_select("eval", "eval", data, ~eval, multiple = FALSE)
+filter_select("include", "include", data, ~include, multiple = FALSE)
+
+```
+
+```{r}
+#| label: chunk-option-selects
+#| layout-ncol: 4
+filter_select("echo", "echo", data, ~echo, multiple = FALSE)
+filter_select("message", "message", data, ~message, multiple = FALSE)
+filter_select("warning", "warning", data, ~warning, multiple = FALSE)
+filter_select("output", "output", data, ~output, multiple = FALSE)
+```
+
+
+**Block output**
+
+```{r}
+#| label: reactable
+#| echo: false
+reactable(data,
+          minRows = 1,
+          pagination = FALSE,
+          showPageInfo = FALSE,
+          outlined = TRUE,
+          defaultColDef = colDef(
+             style = function(value) {
+               cols <- c("hidden" = "#bce2f7", "shown" = "#bdf7bc", "none" = "#f7c0bc", "raw markdown" = "#bdf7bc")
+              colour <- as.vector(cols[value])
+        list(background = colour)
+      }
+          ),
+
+          columns = list(
+             eval = colDef(show = FALSE),
+             echo = colDef(show = FALSE),
+             message = colDef(show = FALSE),
+             warning = colDef(show = FALSE), 
+             include = colDef(show = FALSE), 
+             output = colDef(show = FALSE),  
+             Code = colDef(show = TRUE),
+             Messages = colDef(show = TRUE),  
+             Warnings = colDef(show = TRUE), 
+            `Text, figures & tables` = colDef(show = TRUE)
+          ), 
+          theme = reactableTheme(
+            backgroundColor = "lightgrey"
+  ))
+```
+
+```{js echo = FALSE}
+
+function filter_default() {
+
+  document.getElementById("eval").getElementsByClassName("selectized")[0].selectize.setValue("true", false);
+  document.getElementById("echo").getElementsByClassName("selectized")[0].selectize.setValue("true", false);
+  document.getElementById("message").getElementsByClassName("selectized")[0].selectize.setValue("true", false);
+  document.getElementById("warning").getElementsByClassName("selectized")[0].selectize.setValue("true", false);
+  document.getElementById("include").getElementsByClassName("selectized")[0].selectize.setValue("true", false);
+    document.getElementById("output").getElementsByClassName("selectized")[0].selectize.setValue("true", false);
+ }
+$(document).ready(filter_default);
+//document.addEventListener("load", filter_default);
+
+```
+:::
+
+
+
